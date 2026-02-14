@@ -1,0 +1,106 @@
+{{define "installer_database"}}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}} - FasMail Panel</title>
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+</head>
+<body>
+    <main class="container">
+        <div class="installer-container">
+            <div class="installer-header">
+                <h1>FasMail Panel</h1>
+                <p class="subtitle">Configuración de Base de Datos</p>
+            </div>
+
+            <div class="steps">
+                <span class="step completed"><span class="step-number">1</span> Bienvenida</span>
+                <span class="step active"><span class="step-number">2</span> Base de Datos</span>
+                <span class="step"><span class="step-number">3</span> Migraciones</span>
+                <span class="step"><span class="step-number">4</span> Admin</span>
+                <span class="step"><span class="step-number">5</span> Completar</span>
+            </div>
+
+            {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+            {{end}}
+
+            {{if .Success}}
+            <div class="alert alert-success">{{.Success}}</div>
+            {{end}}
+
+            <article>
+                <header>
+                    <h2>Conexión a PostgreSQL</h2>
+                </header>
+
+                <form method="POST" action="/install/database" id="dbForm">
+                    <div class="grid">
+                        <label>
+                            Host
+                            <input type="text" name="host" id="db_host" value="{{.Host}}" placeholder="localhost" required>
+                        </label>
+                        <label>
+                            Puerto
+                            <input type="number" name="port" id="db_port" value="{{.Port}}" placeholder="5432" required>
+                        </label>
+                    </div>
+
+                    <div class="grid">
+                        <label>
+                            Usuario
+                            <input type="text" name="user" id="db_user" value="{{.User}}" placeholder="fasmail" required>
+                        </label>
+                        <label>
+                            Contraseña
+                            <input type="password" name="password" id="db_password" placeholder="Contraseña de la base de datos" required>
+                        </label>
+                    </div>
+
+                    <div class="grid">
+                        <label>
+                            Nombre de Base de Datos
+                            <input type="text" name="dbname" id="db_name" value="{{.DBName}}" placeholder="fasmail" required>
+                        </label>
+                        <label>
+                            Modo SSL
+                            <select name="sslmode" id="db_sslmode">
+                                <option value="disable" {{if eq .SSLMode "disable"}}selected{{end}}>Deshabilitado</option>
+                                <option value="require" {{if eq .SSLMode "require"}}selected{{end}}>Requerido</option>
+                                <option value="verify-full" {{if eq .SSLMode "verify-full"}}selected{{end}}>Verificación Completa</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <hr>
+                    <h3>Redis (Caché y Sesiones)</h3>
+
+                    <label>
+                        Dirección de Redis
+                        <input type="text" name="redis_addr" value="{{if .RedisAddr}}{{.RedisAddr}}{{else}}localhost:6379{{end}}" placeholder="localhost:6379">
+                        <small>Formato: host:puerto</small>
+                    </label>
+
+                    <div id="testResult" class="test-result"></div>
+
+                    <div class="grid">
+                        <button type="button" id="testBtn" class="secondary" onclick="testConnection()">
+                            Probar Conexión
+                        </button>
+                        <button type="submit">
+                            Guardar y Continuar
+                        </button>
+                    </div>
+                </form>
+
+                <p><a href="/install/">&larr; Volver</a></p>
+            </article>
+        </div>
+    </main>
+    <script src="/static/js/installer.js"></script>
+</body>
+</html>
+{{end}}

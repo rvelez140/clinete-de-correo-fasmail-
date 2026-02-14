@@ -1,0 +1,83 @@
+{{define "installer_migration"}}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}} - FasMail Panel</title>
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+</head>
+<body>
+    <main class="container">
+        <div class="installer-container">
+            <div class="installer-header">
+                <h1>FasMail Panel</h1>
+                <p class="subtitle">Migraciones de Base de Datos</p>
+            </div>
+
+            <div class="steps">
+                <span class="step completed"><span class="step-number">1</span> Bienvenida</span>
+                <span class="step completed"><span class="step-number">2</span> Base de Datos</span>
+                <span class="step active"><span class="step-number">3</span> Migraciones</span>
+                <span class="step"><span class="step-number">4</span> Admin</span>
+                <span class="step"><span class="step-number">5</span> Completar</span>
+            </div>
+
+            {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+            {{end}}
+
+            {{if .Success}}
+            <div class="alert alert-success">{{.Success}}</div>
+            {{end}}
+
+            <article>
+                <header>
+                    <h2>Crear tablas en la base de datos</h2>
+                </header>
+
+                <p>Se ejecutarán las siguientes migraciones para crear la estructura de la base de datos:</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Versión</th>
+                            <th>Archivo</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Migrations}}
+                        <tr>
+                            <td>{{.Version}}</td>
+                            <td><code>{{.Source}}</code></td>
+                            <td>
+                                {{if .Applied}}
+                                <span class="status-badge status-ok">Aplicada</span>
+                                {{else}}
+                                <span class="status-badge status-error">Pendiente</span>
+                                {{end}}
+                            </td>
+                        </tr>
+                        {{else}}
+                        <tr>
+                            <td colspan="3">
+                                <strong>Tablas a crear:</strong> users, sessions, system_config
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+
+                <form method="POST" action="/install/migrate">
+                    <button type="submit" id="migrateBtn" onclick="this.setAttribute('aria-busy', 'true'); this.textContent='Ejecutando...';">
+                        Ejecutar Migraciones
+                    </button>
+                </form>
+            </article>
+        </div>
+    </main>
+</body>
+</html>
+{{end}}

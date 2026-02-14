@@ -1,0 +1,91 @@
+{{define "dashboard"}}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}} - FasMail Panel</title>
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="container">
+            <a href="/admin/" class="brand">FasMail Panel</a>
+            <nav>
+                <a href="/admin/">Dashboard</a>
+                <a href="/admin/settings">Configuración</a>
+                <span>{{.UserEmail}}</span>
+                <form method="POST" action="/auth/logout" style="display:inline; margin:0;">
+                    <a href="#" onclick="this.closest('form').submit(); return false;" class="secondary">Salir</a>
+                </form>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        {{if .Error}}
+        <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+
+        <div class="dashboard-header">
+            <h1>Dashboard</h1>
+            <span class="status-badge status-ok">Sistema Operativo</span>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{.Stats.TotalUsers}}</div>
+                <div class="stat-label">Usuarios Totales</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">
+                    {{if .Stats.PostgresOK}}
+                    <span class="status-badge status-ok">OK</span>
+                    {{else}}
+                    <span class="status-badge status-error">Error</span>
+                    {{end}}
+                </div>
+                <div class="stat-label">PostgreSQL</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">
+                    {{if .Stats.RedisOK}}
+                    <span class="status-badge status-ok">OK</span>
+                    {{else}}
+                    <span class="status-badge status-error">Error</span>
+                    {{end}}
+                </div>
+                <div class="stat-label">Redis</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{.Stats.SystemVersion}}</div>
+                <div class="stat-label">Versión del Sistema</div>
+            </div>
+        </div>
+
+        <article>
+            <header>
+                <h2>Información del Sistema</h2>
+            </header>
+            <table>
+                <tbody>
+                    <tr>
+                        <td><strong>Versión</strong></td>
+                        <td>{{.Stats.SystemVersion}}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Instalado el</strong></td>
+                        <td>{{.Stats.InstalledAt}}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Rol del usuario</strong></td>
+                        <td>{{.UserRole}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </article>
+    </main>
+</body>
+</html>
+{{end}}

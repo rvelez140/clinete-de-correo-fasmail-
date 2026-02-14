@@ -1,0 +1,70 @@
+{{define "installer_complete"}}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}} - FasMail Panel</title>
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+</head>
+<body>
+    <main class="container">
+        <div class="installer-container">
+            <div class="installer-header">
+                <h1>FasMail Panel</h1>
+                <p class="subtitle">Instalación Completa</p>
+            </div>
+
+            <div class="steps">
+                <span class="step completed"><span class="step-number">1</span> Bienvenida</span>
+                <span class="step completed"><span class="step-number">2</span> Base de Datos</span>
+                <span class="step completed"><span class="step-number">3</span> Migraciones</span>
+                <span class="step completed"><span class="step-number">4</span> Admin</span>
+                <span class="step active"><span class="step-number">5</span> Completar</span>
+            </div>
+
+            {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+            {{end}}
+
+            <article>
+                <header>
+                    <h2>Instalación exitosa</h2>
+                </header>
+
+                <div class="alert alert-success">
+                    Todos los componentes han sido configurados correctamente.
+                </div>
+
+                <h3>Resumen de la configuración</h3>
+                <table>
+                    <tbody>
+                        <tr>
+                            <td><strong>Base de Datos</strong></td>
+                            <td>PostgreSQL en {{.DBHost}}:{{.DBPort}}/{{.DBName}}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Usuario DB</strong></td>
+                            <td>{{.DBUser}}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Redis</strong></td>
+                            <td>{{.RedisAddr}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-warning">
+                    Recuerde: al iniciar sesión por primera vez, deberá cambiar la contraseña del usuario administrador.
+                </div>
+
+                <form method="POST" action="/install/finalize">
+                    <button type="submit">Finalizar e Ir al Login</button>
+                </form>
+            </article>
+        </div>
+    </main>
+</body>
+</html>
+{{end}}

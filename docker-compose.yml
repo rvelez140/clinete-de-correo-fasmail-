@@ -1,0 +1,74 @@
+services:
+  app:
+    build: .
+    container_name: fasmail-panel
+    ports:
+      - "8080:8080"
+    environment:
+      - FASMAIL_DB_HOST=postgres
+      - FASMAIL_DB_PORT=5432
+      - FASMAIL_DB_USER=fasmail
+      - FASMAIL_DB_PASSWORD=${DB_PASSWORD:-fasmail_secret}
+      - FASMAIL_DB_NAME=fasmail
+      - FASMAIL_DB_SSLMODE=disable
+      - FASMAIL_REDIS_ADDR=redis:6379
+      - FASMAIL_JWT_SECRET=${JWT_SECRET:-}
+      - FASMAIL_CONFIG_PATH=/data/config.json
+    volumes:
+      - app-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fasmail-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: fasmail-postgres
+    environment:
+      POSTGRES_USER: fasmail
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-fasmail_secret}
+      POSTGRES_DB: fasmail
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - fasmail-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fasmail -d fasmail"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: fasmail-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - fasmail-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  app-data:
+  pgdata:
+  redis-data:
+
+networks:
+  fasmail-network:
+    driver: bridge

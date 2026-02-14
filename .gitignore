@@ -1,0 +1,40 @@
+# Binaries
+bin/
+/server
+/fasmail-panel
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of go coverage
+*.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+
+# Application data
+/data/
+config.json
+
+# Docker
+docker-compose.override.yml

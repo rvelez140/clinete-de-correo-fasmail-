@@ -1,0 +1,103 @@
+{{define "installer_docker"}}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}} - FasMail Panel</title>
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+</head>
+<body>
+    <main class="container">
+        <div class="installer-container">
+            <div class="installer-header">
+                <h1>FasMail Panel</h1>
+                <p class="subtitle">Instalación Automática con Docker</p>
+            </div>
+
+            <div class="steps">
+                <span class="step completed"><span class="step-number">1</span> Bienvenida</span>
+                <span class="step active"><span class="step-number">2</span> Base de Datos</span>
+                <span class="step"><span class="step-number">3</span> Migraciones</span>
+                <span class="step"><span class="step-number">4</span> Admin</span>
+                <span class="step"><span class="step-number">5</span> Completar</span>
+            </div>
+
+            {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+            {{end}}
+
+            <article>
+                <header>
+                    <h2>Auto-instalación con Docker</h2>
+                </header>
+
+                {{if .DockerAvailable}}
+                <div class="alert alert-info">
+                    Docker detectado correctamente en el sistema.
+                </div>
+
+                <p>Se crearán los siguientes contenedores automáticamente:</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Servicio</th>
+                            <th>Imagen</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>PostgreSQL 16</strong></td>
+                            <td><code>postgres:16-alpine</code></td>
+                            <td>Base de datos principal</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Redis 7</strong></td>
+                            <td><code>redis:7-alpine</code></td>
+                            <td>Caché y gestión de sesiones</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-warning">
+                    Las contraseñas serán generadas automáticamente de forma segura y guardadas en la configuración.
+                </div>
+
+                <form method="POST" action="/install/docker" id="dockerForm">
+                    <button type="submit" id="installBtn" onclick="showProgress()">
+                        Iniciar Instalación Automática
+                    </button>
+                </form>
+
+                <div id="progressArea" style="display: none;">
+                    <div class="log-output" id="progressLog">
+                        Iniciando instalación...<br>
+                        Descargando imágenes Docker...<br>
+                        Esto puede tomar unos minutos...<br>
+                    </div>
+                    <progress></progress>
+                </div>
+                {{else}}
+                <div class="alert alert-error">
+                    Docker no está disponible en este sistema. Instale Docker y vuelva a intentarlo.
+                </div>
+                {{end}}
+
+                <p><a href="/install/">&larr; Volver</a></p>
+            </article>
+        </div>
+    </main>
+    <script>
+        function showProgress() {
+            document.getElementById('installBtn').setAttribute('aria-busy', 'true');
+            document.getElementById('installBtn').disabled = true;
+            document.getElementById('installBtn').textContent = 'Instalando...';
+            document.getElementById('progressArea').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
+{{end}}

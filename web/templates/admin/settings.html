@@ -1,0 +1,62 @@
+{{define "settings"}}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}} - FasMail Panel</title>
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="container">
+            <a href="/admin/" class="brand">FasMail Panel</a>
+            <nav>
+                <a href="/admin/">Dashboard</a>
+                <a href="/admin/settings">Configuración</a>
+                <span>{{.UserEmail}}</span>
+                <form method="POST" action="/auth/logout" style="display:inline; margin:0;">
+                    <a href="#" onclick="this.closest('form').submit(); return false;" class="secondary">Salir</a>
+                </form>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        {{if .Error}}
+        <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+
+        {{if .Success}}
+        <div class="alert alert-success">{{.Success}}</div>
+        {{end}}
+
+        <h1>Configuración del Sistema</h1>
+
+        <article>
+            <header>
+                <h2>Parámetros del sistema</h2>
+            </header>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Clave</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range $key, $value := .Configs}}
+                    <tr>
+                        <td><code>{{$key}}</code></td>
+                        <td>{{$value}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </article>
+    </main>
+</body>
+</html>
+{{end}}

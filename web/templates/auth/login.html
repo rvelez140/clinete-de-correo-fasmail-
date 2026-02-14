@@ -1,0 +1,44 @@
+{{define "login"}}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}} - FasMail Panel</title>
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+</head>
+<body>
+    <main class="container">
+        <div class="auth-container">
+            <h1>FasMail Panel</h1>
+            <p class="subtitle">Iniciar Sesión</p>
+
+            {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+            {{end}}
+
+            {{if .Success}}
+            <div class="alert alert-success">{{.Success}}</div>
+            {{end}}
+
+            <article>
+                <form method="POST" action="/auth/login">
+                    <label>
+                        Email
+                        <input type="email" name="email" value="{{.Email}}" placeholder="usuario@ejemplo.com" required autofocus>
+                    </label>
+
+                    <label>
+                        Contraseña
+                        <input type="password" name="password" placeholder="Su contraseña" required>
+                    </label>
+
+                    <button type="submit">Iniciar Sesión</button>
+                </form>
+            </article>
+        </div>
+    </main>
+</body>
+</html>
+{{end}}

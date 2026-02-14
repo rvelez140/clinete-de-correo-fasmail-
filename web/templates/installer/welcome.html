@@ -1,0 +1,63 @@
+{{define "installer_welcome"}}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}} - FasMail Panel</title>
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+</head>
+<body>
+    <main class="container">
+        <div class="installer-container">
+            <div class="installer-header">
+                <h1>FasMail Panel</h1>
+                <p class="subtitle">Asistente de Instalación</p>
+            </div>
+
+            <div class="steps">
+                <span class="step active"><span class="step-number">1</span> Bienvenida</span>
+                <span class="step"><span class="step-number">2</span> Base de Datos</span>
+                <span class="step"><span class="step-number">3</span> Migraciones</span>
+                <span class="step"><span class="step-number">4</span> Admin</span>
+                <span class="step"><span class="step-number">5</span> Completar</span>
+            </div>
+
+            <article>
+                <header>
+                    <h2>Bienvenido al instalador de FasMail Panel</h2>
+                </header>
+                <p>
+                    Este asistente le guiará a través de la configuración inicial del sistema.
+                    Necesitará configurar una base de datos PostgreSQL y crear un usuario administrador.
+                </p>
+                <p>Seleccione cómo desea configurar la base de datos:</p>
+
+                <div class="option-cards">
+                    <a href="/install/database" class="option-card" role="button">
+                        <div class="icon">&#9881;</div>
+                        <h3>Configuración Manual</h3>
+                        <p>Conectar a una base de datos PostgreSQL existente. Ideal si ya tiene un servidor de base de datos configurado.</p>
+                    </a>
+
+                    {{if .DockerAvailable}}
+                    <a href="/install/docker" class="option-card" role="button">
+                        <div class="icon">&#128230;</div>
+                        <h3>Auto-instalación Docker</h3>
+                        <p>Crear automáticamente contenedores Docker para PostgreSQL y Redis. La opción más rápida para empezar.</p>
+                    </a>
+                    {{else}}
+                    <div class="option-card" style="opacity: 0.5; cursor: not-allowed;">
+                        <div class="icon">&#128230;</div>
+                        <h3>Auto-instalación Docker</h3>
+                        <p>Docker no está disponible en este sistema. Instale Docker para habilitar esta opción.</p>
+                    </div>
+                    {{end}}
+                </div>
+            </article>
+        </div>
+    </main>
+</body>
+</html>
+{{end}}

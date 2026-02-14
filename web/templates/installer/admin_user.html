@@ -1,0 +1,70 @@
+{{define "installer_admin"}}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}} - FasMail Panel</title>
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+</head>
+<body>
+    <main class="container">
+        <div class="installer-container">
+            <div class="installer-header">
+                <h1>FasMail Panel</h1>
+                <p class="subtitle">Crear Usuario Administrador</p>
+            </div>
+
+            <div class="steps">
+                <span class="step completed"><span class="step-number">1</span> Bienvenida</span>
+                <span class="step completed"><span class="step-number">2</span> Base de Datos</span>
+                <span class="step completed"><span class="step-number">3</span> Migraciones</span>
+                <span class="step active"><span class="step-number">4</span> Admin</span>
+                <span class="step"><span class="step-number">5</span> Completar</span>
+            </div>
+
+            {{if .Error}}
+            <div class="alert alert-error">{{.Error}}</div>
+            {{end}}
+
+            <article>
+                <header>
+                    <h2>Crear cuenta de administrador</h2>
+                </header>
+
+                <div class="alert alert-info">
+                    Este usuario tendrá acceso completo al panel de administración.
+                    Al iniciar sesión por primera vez, se le pedirá que cambie la contraseña.
+                </div>
+
+                <form method="POST" action="/install/admin">
+                    <label>
+                        Email
+                        <input type="email" name="email" value="{{.Email}}" placeholder="admin@fasmail.local" required>
+                    </label>
+
+                    <label>
+                        Nombre de visualización
+                        <input type="text" name="display_name" value="{{.DisplayName}}" placeholder="Administrador" required>
+                    </label>
+
+                    <label>
+                        Contraseña
+                        <input type="password" name="password" id="password" placeholder="Contraseña temporal" required minlength="4">
+                        <small>Esta es una contraseña temporal. Se le pedirá que la cambie al primer inicio de sesión.</small>
+                    </label>
+
+                    <label>
+                        Confirmar Contraseña
+                        <input type="password" name="confirm_password" placeholder="Repita la contraseña" required>
+                    </label>
+
+                    <button type="submit">Crear Administrador y Continuar</button>
+                </form>
+            </article>
+        </div>
+    </main>
+</body>
+</html>
+{{end}}
