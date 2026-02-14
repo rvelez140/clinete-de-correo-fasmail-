@@ -87,6 +87,9 @@ func main() {
 	staticFS, _ := fs.Sub(web.StaticFS, "static")
 	r.StaticFS("/static", http.FS(staticFS))
 
+	// Serve uploaded files (logos, etc.) from /data/
+	r.Static("/uploads", "/data")
+
 	// Health endpoint
 	r.GET("/health", func(c *gin.Context) {
 		pgOK := pool != nil && database.PingPool(ctx, pool) == nil
@@ -111,8 +114,8 @@ func main() {
 	r.Use(func(c *gin.Context) {
 		path := c.Request.URL.Path
 
-		// Always allow static, health
-		if path == "/health" || len(path) >= 7 && path[:7] == "/static" {
+		// Always allow static, health, uploads
+		if path == "/health" || len(path) >= 7 && path[:7] == "/static" || len(path) >= 8 && path[:8] == "/uploads" {
 			c.Next()
 			return
 		}
@@ -181,6 +184,7 @@ func main() {
 	authHandler := auth.NewHandler(authSvc)
 
 	authGroup := r.Group("/auth")
+	authGroup.Use(auth.CompanyBrandingMiddleware(&pool))
 	{
 		authGroup.GET("/login", authHandler.ShowLoginPage)
 		authGroup.POST("/login", authHandler.HandleLogin)
@@ -188,6 +192,7 @@ func main() {
 
 	authProtected := r.Group("/auth")
 	authProtected.Use(auth.AuthRequired(jwtMgr, &redisClient))
+	authProtected.Use(auth.CompanyBrandingMiddleware(&pool))
 	{
 		authProtected.POST("/logout", authHandler.HandleLogout)
 		authProtected.GET("/change-password", authHandler.ShowChangePassword)
@@ -198,6 +203,7 @@ func main() {
 	adminGroup := r.Group("/admin")
 	adminGroup.Use(auth.AuthRequired(jwtMgr, &redisClient))
 	adminGroup.Use(auth.ForcePasswordChange())
+	adminGroup.Use(auth.CompanyBrandingMiddleware(&pool))
 	{
 		adminGroup.GET("/", func(c *gin.Context) {
 			if pool == nil {
@@ -231,6 +237,89 @@ func main() {
 			adminSvc := admin.NewService(userRepo, systemRepo, pool, redisClient)
 			adminHandler := admin.NewHandler(adminSvc)
 			adminHandler.HandleSettings(c)
+		})
+	}
+
+	// ---- COMPANY MANAGEMENT ROUTES (super_admin only) ----
+	companiesGroup := adminGroup.Group("/companies")
+	companiesGroup.Use(auth.SuperAdminRequired())
+	{
+		companiesGroup.GET("/", func(c *gin.Context) {
+			if pool == nil {
+				c.Redirect(http.StatusFound, "/auth/login")
+				return
+			}
+			companyRepo := models.NewCompanyRepository(pool)
+			userRepo := models.NewUserRepository(pool)
+			companySvc := admin.NewCompanyService(companyRepo, userRepo)
+			companyHandler := admin.NewCompanyHandler(companySvc)
+			companyHandler.ShowCompanies(c)
+		})
+		companiesGroup.GET("/new", func(c *gin.Context) {
+			if pool == nil {
+				c.Redirect(http.StatusFound, "/auth/login")
+				return
+			}
+			companyRepo := models.NewCompanyRepository(pool)
+			userRepo := models.NewUserRepository(pool)
+			companySvc := admin.NewCompanyService(companyRepo, userRepo)
+			companyHandler := admin.NewCompanyHandler(companySvc)
+			companyHandler.ShowCreateCompany(c)
+		})
+		companiesGroup.POST("/new", func(c *gin.Context) {
+			if pool == nil {
+				c.Redirect(http.StatusFound, "/auth/login")
+				return
+			}
+			companyRepo := models.NewCompanyRepository(pool)
+			userRepo := models.NewUserRepository(pool)
+			companySvc := admin.NewCompanyService(companyRepo, userRepo)
+			companyHandler := admin.NewCompanyHandler(companySvc)
+			companyHandler.HandleCreateCompany(c)
+		})
+		companiesGroup.GET("/:id/edit", func(c *gin.Context) {
+			if pool == nil {
+				c.Redirect(http.StatusFound, "/auth/login")
+				return
+			}
+			companyRepo := models.NewCompanyRepository(pool)
+			userRepo := models.NewUserRepository(pool)
+			companySvc := admin.NewCompanyService(companyRepo, userRepo)
+			companyHandler := admin.NewCompanyHandler(companySvc)
+			companyHandler.ShowEditCompany(c)
+		})
+		companiesGroup.POST("/:id/edit", func(c *gin.Context) {
+			if pool == nil {
+				c.Redirect(http.StatusFound, "/auth/login")
+				return
+			}
+			companyRepo := models.NewCompanyRepository(pool)
+			userRepo := models.NewUserRepository(pool)
+			companySvc := admin.NewCompanyService(companyRepo, userRepo)
+			companyHandler := admin.NewCompanyHandler(companySvc)
+			companyHandler.HandleEditCompany(c)
+		})
+		companiesGroup.POST("/:id/logo", func(c *gin.Context) {
+			if pool == nil {
+				c.Redirect(http.StatusFound, "/auth/login")
+				return
+			}
+			companyRepo := models.NewCompanyRepository(pool)
+			userRepo := models.NewUserRepository(pool)
+			companySvc := admin.NewCompanyService(companyRepo, userRepo)
+			companyHandler := admin.NewCompanyHandler(companySvc)
+			companyHandler.HandleUploadLogo(c)
+		})
+		companiesGroup.POST("/:id/delete", func(c *gin.Context) {
+			if pool == nil {
+				c.Redirect(http.StatusFound, "/auth/login")
+				return
+			}
+			companyRepo := models.NewCompanyRepository(pool)
+			userRepo := models.NewUserRepository(pool)
+			companySvc := admin.NewCompanyService(companyRepo, userRepo)
+			companyHandler := admin.NewCompanyHandler(companySvc)
+			companyHandler.HandleDeleteCompany(c)
 		})
 	}
 
@@ -288,11 +377,12 @@ func main() {
 func loadTemplates() *template.Template {
 	tmpl := template.New("")
 
+	// Load layouts first so partials are available to all templates
 	templateDirs := []string{
+		"templates/layouts/*.html",
 		"templates/installer/*.html",
 		"templates/auth/*.html",
 		"templates/admin/*.html",
-		"templates/layouts/*.html",
 	}
 
 	for _, pattern := range templateDirs {
@@ -316,4 +406,3 @@ func loadTemplates() *template.Template {
 
 	return tmpl
 }
-

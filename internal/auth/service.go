@@ -91,7 +91,7 @@ func (s *Service) CreateSession(ctx context.Context, user *models.User, userAgen
 
 	tokens, err := s.jwtMgr.GenerateTokenPair(
 		user.ID, user.Email, user.Role,
-		user.MustChangePassword, sessionID,
+		user.MustChangePassword, sessionID, user.CompanyID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("generate tokens: %w", err)
@@ -113,7 +113,7 @@ func (s *Service) CreateSession(ctx context.Context, user *models.User, userAgen
 
 	rc := s.getRedis()
 	if rc != nil {
-		if err := database.StoreSession(ctx, rc, sessionID.String(), user.ID, user.Role, s.jwtMgr.GetAccessTokenTTL()); err != nil {
+		if err := database.StoreSession(ctx, rc, sessionID.String(), user.ID, user.Role, user.CompanyID, s.jwtMgr.GetAccessTokenTTL()); err != nil {
 			return nil, fmt.Errorf("store redis session: %w", err)
 		}
 	}
@@ -207,13 +207,17 @@ func (s *Service) CreateDefaultAdmin(ctx context.Context) error {
 		return fmt.Errorf("hash default password: %w", err)
 	}
 
+	// Assign to default company
+	defaultCompanyID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+
 	admin := &models.User{
 		Email:              DefaultAdminEmail,
 		PasswordHash:       hash,
 		DisplayName:        DefaultAdminName,
-		Role:               "admin",
+		Role:               "super_admin",
 		MustChangePassword: true,
 		IsActive:           true,
+		CompanyID:          &defaultCompanyID,
 	}
 
 	if err := userRepo.Create(ctx, admin); err != nil {

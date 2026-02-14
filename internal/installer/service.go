@@ -9,6 +9,7 @@ import (
 	"github.com/fasmail/panel/internal/database"
 	"github.com/fasmail/panel/internal/docker"
 	"github.com/fasmail/panel/internal/models"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -132,13 +133,17 @@ func (s *Service) CreateAdminUser(ctx context.Context, pool *pgxpool.Pool, email
 		return fmt.Errorf("hash password: %w", err)
 	}
 
+	// Assign to default company
+	defaultCompanyID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+
 	admin := &models.User{
 		Email:              email,
 		PasswordHash:       hash,
 		DisplayName:        displayName,
-		Role:               "admin",
+		Role:               "super_admin",
 		MustChangePassword: true,
 		IsActive:           true,
+		CompanyID:          &defaultCompanyID,
 	}
 
 	return userRepo.Create(ctx, admin)

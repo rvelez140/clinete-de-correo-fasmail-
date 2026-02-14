@@ -226,10 +226,65 @@
 }
 
 .navbar .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     font-weight: bold;
     font-size: 1.2rem;
     text-decoration: none;
     color: var(--fasmail-primary);
+}
+
+/* Brand logo in navbar */
+.brand-logo {
+    max-height: 36px;
+    width: auto;
+    object-fit: contain;
+}
+
+/* Auth page branding */
+.auth-brand {
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+.auth-logo {
+    max-height: 60px;
+    max-width: 200px;
+    object-fit: contain;
+    margin-bottom: 0.5rem;
+}
+
+/* Company management */
+.color-swatch {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid var(--pico-muted-color);
+    vertical-align: middle;
+    margin-right: 0.25rem;
+}
+
+.logo-thumbnail {
+    max-height: 40px;
+    max-width: 120px;
+    object-fit: contain;
+}
+
+.color-picker-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.color-picker-group input[type="color"] {
+    width: 50px;
+    height: 36px;
+    padding: 2px;
+    border: 1px solid var(--pico-muted-color);
+    border-radius: 4px;
+    cursor: pointer;
 }
 
 .navbar nav {

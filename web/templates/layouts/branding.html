@@ -1,0 +1,25 @@
+{{define "branding_head"}}
+{{if .Branding}}
+<style>
+    :root {
+        --fasmail-primary: {{.Branding.PrimaryColor}};
+        --fasmail-success: {{.Branding.SuccessColor}};
+        --fasmail-danger: {{.Branding.DangerColor}};
+        --fasmail-warning: {{.Branding.WarningColor}};
+    }
+</style>
+{{end}}
+{{end}}
+
+{{define "branding_logo"}}
+{{if and .Branding .Branding.LogoURL}}
+    <img src="{{.Branding.LogoURL}}" alt="{{.Branding.Name}}" class="brand-logo">
+    <span>{{.Branding.Name}}</span>
+{{else if .Branding}}
+    {{.Branding.Name}}
+{{else}}
+    FasMail Panel
+{{end}}
+{{end}}
+
+{{define "branding_title"}}{{if .Branding}}{{.Branding.Name}}{{else}}FasMail Panel{{end}}{{end}}

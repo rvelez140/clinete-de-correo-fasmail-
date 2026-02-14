@@ -26,12 +26,14 @@ func (h *Handler) ShowDashboard(c *gin.Context) {
 
 	email, _ := c.Get("email")
 	role, _ := c.Get("role")
+	branding, _ := c.Get("branding")
 
 	c.HTML(http.StatusOK, "dashboard", gin.H{
 		"Title":     "Dashboard",
 		"Stats":     stats,
 		"UserEmail": email,
 		"UserRole":  role,
+		"Branding":  branding,
 	})
 }
 
@@ -47,12 +49,14 @@ func (h *Handler) ShowSettings(c *gin.Context) {
 
 	email, _ := c.Get("email")
 	role, _ := c.Get("role")
+	branding, _ := c.Get("branding")
 
 	c.HTML(http.StatusOK, "settings", gin.H{
 		"Title":     "Configuración del Sistema",
 		"Configs":   configs,
 		"UserEmail": email,
 		"UserRole":  role,
+		"Branding":  branding,
 	})
 }
 

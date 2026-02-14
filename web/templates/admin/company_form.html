@@ -1,0 +1,135 @@
+{{define "company_form"}}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}} - {{template "branding_title" .}}</title>
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+    {{template "branding_head" .}}
+</head>
+<body>
+    <header class="navbar">
+        <div class="container">
+            <a href="/admin/" class="brand">{{template "branding_logo" .}}</a>
+            <nav>
+                <a href="/admin/">Dashboard</a>
+                <a href="/admin/settings">Configuraci&oacute;n</a>
+                {{if eq .UserRole "super_admin"}}<a href="/admin/companies">Empresas</a>{{end}}
+                <span>{{.UserEmail}}</span>
+                <form method="POST" action="/auth/logout" style="display:inline; margin:0;">
+                    <a href="#" onclick="this.closest('form').submit(); return false;" class="secondary">Salir</a>
+                </form>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container" style="max-width: 700px;">
+        {{if .Error}}
+        <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+
+        <h1>{{.Title}}</h1>
+
+        {{if .IsNew}}
+        <form method="POST" action="/admin/companies/new">
+        {{else}}
+        <form method="POST" action="/admin/companies/{{.Company.ID}}/edit">
+        {{end}}
+            <label>
+                Nombre
+                <input type="text" name="name" value="{{.Company.Name}}" required placeholder="Mi Empresa">
+            </label>
+
+            <label>
+                Slug (identificador URL)
+                <input type="text" name="slug" value="{{.Company.Slug}}" required placeholder="mi-empresa" pattern="[a-z0-9][a-z0-9-]*[a-z0-9]">
+                <small>Solo letras min&uacute;sculas, n&uacute;meros y guiones. Se usa en la URL de login: /auth/login?company=slug</small>
+            </label>
+
+            <div class="grid">
+                <label>
+                    Color Primario
+                    <div class="color-picker-group">
+                        <input type="color" name="primary_color" value="{{.Company.PrimaryColor}}">
+                        <span>{{.Company.PrimaryColor}}</span>
+                    </div>
+                </label>
+                <label>
+                    Color &Eacute;xito
+                    <div class="color-picker-group">
+                        <input type="color" name="success_color" value="{{.Company.SuccessColor}}">
+                        <span>{{.Company.SuccessColor}}</span>
+                    </div>
+                </label>
+            </div>
+
+            <div class="grid">
+                <label>
+                    Color Peligro
+                    <div class="color-picker-group">
+                        <input type="color" name="danger_color" value="{{.Company.DangerColor}}">
+                        <span>{{.Company.DangerColor}}</span>
+                    </div>
+                </label>
+                <label>
+                    Color Advertencia
+                    <div class="color-picker-group">
+                        <input type="color" name="warning_color" value="{{.Company.WarningColor}}">
+                        <span>{{.Company.WarningColor}}</span>
+                    </div>
+                </label>
+            </div>
+
+            {{if not .IsNew}}
+            <label>
+                <input type="checkbox" name="is_active" {{if .Company.IsActive}}checked{{end}}>
+                Empresa activa
+            </label>
+            {{end}}
+
+            <button type="submit">{{if .IsNew}}Crear Empresa{{else}}Guardar Cambios{{end}}</button>
+        </form>
+
+        {{if not .IsNew}}
+        <hr>
+
+        <article>
+            <header><h3>Logo de la Empresa</h3></header>
+            {{if .Company.LogoPath}}
+            <div style="margin-bottom: 1rem;">
+                <img src="/uploads/{{.Company.LogoPath}}" alt="Logo actual" style="max-height: 80px; max-width: 300px; object-fit: contain;">
+            </div>
+            {{end}}
+
+            <form method="POST" action="/admin/companies/{{.Company.ID}}/logo" enctype="multipart/form-data">
+                <label>
+                    {{if .Company.LogoPath}}Cambiar logo{{else}}Subir logo{{end}}
+                    <input type="file" name="logo" accept="image/png,image/jpeg,image/svg+xml" required>
+                    <small>Formatos: PNG, JPG, SVG. M&aacute;ximo 2MB.</small>
+                </label>
+                <button type="submit" class="secondary">Subir Logo</button>
+            </form>
+        </article>
+
+        <hr>
+
+        {{if ne .Company.Slug "default"}}
+        <article>
+            <header><h3>Zona de Peligro</h3></header>
+            <form method="POST" action="/admin/companies/{{.Company.ID}}/delete"
+                  onsubmit="return confirm('&iquest;Est&aacute;s seguro de desactivar esta empresa?');">
+                <button type="submit" class="secondary" style="background: var(--fasmail-danger); border-color: var(--fasmail-danger); color: white;">
+                    Desactivar Empresa
+                </button>
+            </form>
+        </article>
+        {{end}}
+        {{end}}
+
+        <a href="/admin/companies">&larr; Volver a Empresas</a>
+    </main>
+</body>
+</html>
+{{end}}

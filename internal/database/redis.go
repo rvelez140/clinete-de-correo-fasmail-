@@ -12,9 +12,10 @@ import (
 )
 
 type SessionData struct {
-	UserID    uuid.UUID `json:"user_id"`
-	Role      string    `json:"role"`
-	CreatedAt time.Time `json:"created_at"`
+	UserID    uuid.UUID  `json:"user_id"`
+	Role      string     `json:"role"`
+	CompanyID *uuid.UUID `json:"company_id,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
 }
 
 func NewRedisClient(cfg config.RedisConfig) (*redis.Client, error) {
@@ -45,10 +46,11 @@ func PingRedis(ctx context.Context, client *redis.Client) error {
 	return client.Ping(ctx).Err()
 }
 
-func StoreSession(ctx context.Context, client *redis.Client, sessionID string, userID uuid.UUID, role string, ttl time.Duration) error {
+func StoreSession(ctx context.Context, client *redis.Client, sessionID string, userID uuid.UUID, role string, companyID *uuid.UUID, ttl time.Duration) error {
 	data := SessionData{
 		UserID:    userID,
 		Role:      role,
+		CompanyID: companyID,
 		CreatedAt: time.Now(),
 	}
 

@@ -5,7 +5,10 @@ import (
 	"strings"
 
 	"github.com/fasmail/panel/internal/database"
+	"github.com/fasmail/panel/internal/models"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -53,6 +56,9 @@ func AuthRequired(jwtMgr *JWTManager, redisClient **redis.Client) gin.HandlerFun
 		c.Set("role", claims.Role)
 		c.Set("must_change_password", claims.MustChangePassword)
 		c.Set("session_id", claims.SessionID)
+		if claims.CompanyID != nil {
+			c.Set("company_id", *claims.CompanyID)
+		}
 
 		c.Next()
 	}
@@ -61,7 +67,7 @@ func AuthRequired(jwtMgr *JWTManager, redisClient **redis.Client) gin.HandlerFun
 func AdminRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get("role")
-		if !exists || role != "admin" {
+		if !exists || (role != "admin" && role != "super_admin") {
 			if isHTMLRequest(c) {
 				c.HTML(http.StatusForbidden, "error", gin.H{
 					"Title":   "Acceso Denegado",
@@ -73,6 +79,66 @@ func AdminRequired() gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "permisos insuficientes"})
 			return
 		}
+		c.Next()
+	}
+}
+
+func SuperAdminRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, exists := c.Get("role")
+		if !exists || role != "super_admin" {
+			if isHTMLRequest(c) {
+				c.HTML(http.StatusForbidden, "error", gin.H{
+					"Title":   "Acceso Denegado",
+					"Message": "Se requieren permisos de super administrador.",
+				})
+				c.Abort()
+				return
+			}
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "permisos insuficientes"})
+			return
+		}
+		c.Next()
+	}
+}
+
+func CompanyBrandingMiddleware(pool **pgxpool.Pool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if pool == nil || *pool == nil {
+			c.Next()
+			return
+		}
+
+		companyRepo := models.NewCompanyRepository(*pool)
+
+		// Try to get company from authenticated user context
+		if companyIDVal, exists := c.Get("company_id"); exists {
+			if companyID, ok := companyIDVal.(uuid.UUID); ok {
+				company, err := companyRepo.GetByID(c.Request.Context(), companyID)
+				if err == nil {
+					c.Set("branding", company.ToBranding("/uploads"))
+					c.Next()
+					return
+				}
+			}
+		}
+
+		// For unauthenticated pages (login), try query parameter ?company=slug
+		if slug := c.Query("company"); slug != "" {
+			company, err := companyRepo.GetBySlug(c.Request.Context(), slug)
+			if err == nil {
+				c.Set("branding", company.ToBranding("/uploads"))
+				c.Next()
+				return
+			}
+		}
+
+		// Fallback to default company
+		company, err := companyRepo.GetDefault(c.Request.Context())
+		if err == nil {
+			c.Set("branding", company.ToBranding("/uploads"))
+		}
+
 		c.Next()
 	}
 }
