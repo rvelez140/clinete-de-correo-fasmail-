@@ -4,15 +4,21 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{.Title}} - FasMail Panel</title>
+    <title>{{.Title}} - {{template "branding_title" .}}</title>
     <link rel="stylesheet" href="/static/css/pico.min.css">
     <link rel="stylesheet" href="/static/css/custom.css">
+    {{template "branding_head" .}}
 </head>
 <body>
     <main class="container">
         <div class="auth-container">
-            <h1>FasMail Panel</h1>
-            <p class="subtitle">Iniciar Sesión</p>
+            <div class="auth-brand">
+                {{if and .Branding .Branding.LogoURL}}
+                <img src="{{.Branding.LogoURL}}" alt="{{.Branding.Name}}" class="auth-logo">
+                {{end}}
+                <h1>{{template "branding_title" .}}</h1>
+            </div>
+            <p class="subtitle">Iniciar Sesi&oacute;n</p>
 
             {{if .Error}}
             <div class="alert alert-error">{{.Error}}</div>
@@ -23,18 +29,18 @@
             {{end}}
 
             <article>
-                <form method="POST" action="/auth/login">
+                <form method="POST" action="/auth/login{{if .CompanySlug}}?company={{.CompanySlug}}{{end}}">
                     <label>
                         Email
                         <input type="email" name="email" value="{{.Email}}" placeholder="usuario@ejemplo.com" required autofocus>
                     </label>
 
                     <label>
-                        Contraseña
-                        <input type="password" name="password" placeholder="Su contraseña" required>
+                        Contrase&ntilde;a
+                        <input type="password" name="password" placeholder="Su contrase&ntilde;a" required>
                     </label>
 
-                    <button type="submit">Iniciar Sesión</button>
+                    <button type="submit">Iniciar Sesi&oacute;n</button>
                 </form>
             </article>
         </div>

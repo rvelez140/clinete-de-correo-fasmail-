@@ -11,11 +11,12 @@ import (
 
 type Claims struct {
 	jwt.RegisteredClaims
-	UserID             uuid.UUID `json:"uid"`
-	Email              string    `json:"email"`
-	Role               string    `json:"role"`
-	MustChangePassword bool      `json:"mcp"`
-	SessionID          uuid.UUID `json:"sid"`
+	UserID             uuid.UUID  `json:"uid"`
+	Email              string     `json:"email"`
+	Role               string     `json:"role"`
+	MustChangePassword bool       `json:"mcp"`
+	SessionID          uuid.UUID  `json:"sid"`
+	CompanyID          *uuid.UUID `json:"cid,omitempty"`
 }
 
 type TokenPair struct {
@@ -37,7 +38,7 @@ func NewJWTManager(cfg config.JWTConfig) *JWTManager {
 	}
 }
 
-func (m *JWTManager) GenerateTokenPair(userID uuid.UUID, email, role string, mustChangePassword bool, sessionID uuid.UUID) (*TokenPair, error) {
+func (m *JWTManager) GenerateTokenPair(userID uuid.UUID, email, role string, mustChangePassword bool, sessionID uuid.UUID, companyID *uuid.UUID) (*TokenPair, error) {
 	now := time.Now()
 
 	accessClaims := Claims{
@@ -53,6 +54,7 @@ func (m *JWTManager) GenerateTokenPair(userID uuid.UUID, email, role string, mus
 		Role:               role,
 		MustChangePassword: mustChangePassword,
 		SessionID:          sessionID,
+		CompanyID:          companyID,
 	}
 
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
@@ -73,6 +75,7 @@ func (m *JWTManager) GenerateTokenPair(userID uuid.UUID, email, role string, mus
 		Email:     email,
 		Role:      role,
 		SessionID: sessionID,
+		CompanyID: companyID,
 	}
 
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)

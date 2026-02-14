@@ -16,20 +16,29 @@ func NewHandler(service *Service) *Handler {
 }
 
 func (h *Handler) ShowLoginPage(c *gin.Context) {
+	branding, _ := c.Get("branding")
+	companySlug := c.Query("company")
+
 	c.HTML(http.StatusOK, "login", gin.H{
-		"Title": "Iniciar Sesión",
+		"Title":       "Iniciar Sesion",
+		"Branding":    branding,
+		"CompanySlug": companySlug,
 	})
 }
 
 func (h *Handler) HandleLogin(c *gin.Context) {
 	email := c.PostForm("email")
 	password := c.PostForm("password")
+	branding, _ := c.Get("branding")
+	companySlug := c.Query("company")
 
 	if email == "" || password == "" {
 		c.HTML(http.StatusBadRequest, "login", gin.H{
-			"Title": "Iniciar Sesión",
-			"Error": "Email y contraseña son requeridos",
-			"Email": email,
+			"Title":       "Iniciar Sesion",
+			"Error":       "Email y contraseña son requeridos",
+			"Email":       email,
+			"Branding":    branding,
+			"CompanySlug": companySlug,
 		})
 		return
 	}
@@ -37,9 +46,11 @@ func (h *Handler) HandleLogin(c *gin.Context) {
 	user, err := h.service.Authenticate(c.Request.Context(), email, password)
 	if err != nil {
 		c.HTML(http.StatusUnauthorized, "login", gin.H{
-			"Title": "Iniciar Sesión",
-			"Error": "Credenciales inválidas",
-			"Email": email,
+			"Title":       "Iniciar Sesion",
+			"Error":       "Credenciales invalidas",
+			"Email":       email,
+			"Branding":    branding,
+			"CompanySlug": companySlug,
 		})
 		return
 	}
@@ -50,9 +61,11 @@ func (h *Handler) HandleLogin(c *gin.Context) {
 	tokens, err := h.service.CreateSession(c.Request.Context(), user, userAgent, ip)
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "login", gin.H{
-			"Title": "Iniciar Sesión",
-			"Error": "Error al crear la sesión. Intente de nuevo.",
-			"Email": email,
+			"Title":       "Iniciar Sesion",
+			"Error":       "Error al crear la sesion. Intente de nuevo.",
+			"Email":       email,
+			"Branding":    branding,
+			"CompanySlug": companySlug,
 		})
 		return
 	}
@@ -84,8 +97,11 @@ func (h *Handler) HandleLogout(c *gin.Context) {
 }
 
 func (h *Handler) ShowChangePassword(c *gin.Context) {
+	branding, _ := c.Get("branding")
+
 	c.HTML(http.StatusOK, "force_password_change", gin.H{
-		"Title": "Cambiar Contraseña",
+		"Title":    "Cambiar Contrasena",
+		"Branding": branding,
 	})
 }
 
@@ -93,19 +109,22 @@ func (h *Handler) HandleChangePassword(c *gin.Context) {
 	currentPassword := c.PostForm("current_password")
 	newPassword := c.PostForm("new_password")
 	confirmPassword := c.PostForm("confirm_password")
+	branding, _ := c.Get("branding")
 
 	if currentPassword == "" || newPassword == "" || confirmPassword == "" {
 		c.HTML(http.StatusBadRequest, "force_password_change", gin.H{
-			"Title": "Cambiar Contraseña",
-			"Error": "Todos los campos son requeridos",
+			"Title":    "Cambiar Contrasena",
+			"Error":    "Todos los campos son requeridos",
+			"Branding": branding,
 		})
 		return
 	}
 
 	if newPassword != confirmPassword {
 		c.HTML(http.StatusBadRequest, "force_password_change", gin.H{
-			"Title": "Cambiar Contraseña",
-			"Error": "Las contraseñas no coinciden",
+			"Title":    "Cambiar Contrasena",
+			"Error":    "Las contrasenas no coinciden",
+			"Branding": branding,
 		})
 		return
 	}
@@ -115,8 +134,9 @@ func (h *Handler) HandleChangePassword(c *gin.Context) {
 
 	if err := h.service.ChangePassword(c.Request.Context(), userID, currentPassword, newPassword); err != nil {
 		c.HTML(http.StatusBadRequest, "force_password_change", gin.H{
-			"Title": "Cambiar Contraseña",
-			"Error": err.Error(),
+			"Title":    "Cambiar Contrasena",
+			"Error":    err.Error(),
+			"Branding": branding,
 		})
 		return
 	}

@@ -1,0 +1,84 @@
+{{define "companies"}}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}} - {{template "branding_title" .}}</title>
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+    {{template "branding_head" .}}
+</head>
+<body>
+    <header class="navbar">
+        <div class="container">
+            <a href="/admin/" class="brand">{{template "branding_logo" .}}</a>
+            <nav>
+                <a href="/admin/">Dashboard</a>
+                <a href="/admin/settings">Configuraci&oacute;n</a>
+                {{if eq .UserRole "super_admin"}}<a href="/admin/companies">Empresas</a>{{end}}
+                <span>{{.UserEmail}}</span>
+                <form method="POST" action="/auth/logout" style="display:inline; margin:0;">
+                    <a href="#" onclick="this.closest('form').submit(); return false;" class="secondary">Salir</a>
+                </form>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        {{if .Error}}
+        <div class="alert alert-error">{{.Error}}</div>
+        {{end}}
+
+        <div class="dashboard-header">
+            <h1>Empresas</h1>
+            <a href="/admin/companies/new" role="button">Nueva Empresa</a>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Slug</th>
+                    <th>Color Primario</th>
+                    <th>Logo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Companies}}
+                <tr>
+                    <td><strong>{{.Name}}</strong></td>
+                    <td><code>{{.Slug}}</code></td>
+                    <td>
+                        <span class="color-swatch" style="background-color: {{.PrimaryColor}};"></span>
+                        <small>{{.PrimaryColor}}</small>
+                    </td>
+                    <td>
+                        {{if .LogoPath}}
+                        <img src="/uploads/{{.LogoPath}}" alt="Logo" class="logo-thumbnail">
+                        {{else}}
+                        <small style="color: var(--pico-muted-color);">Sin logo</small>
+                        {{end}}
+                    </td>
+                    <td>
+                        {{if .IsActive}}
+                        <span class="status-badge status-ok">Activa</span>
+                        {{else}}
+                        <span class="status-badge status-error">Inactiva</span>
+                        {{end}}
+                    </td>
+                    <td>
+                        <a href="/admin/companies/{{.ID}}/edit">Editar</a>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+
+        <p style="color: var(--pico-muted-color);">Total: {{.Total}} empresas</p>
+    </main>
+</body>
+</html>
+{{end}}

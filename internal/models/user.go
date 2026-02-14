@@ -18,6 +18,7 @@ type User struct {
 	Role               string     `json:"role"`
 	MustChangePassword bool       `json:"must_change_password"`
 	IsActive           bool       `json:"is_active"`
+	CompanyID          *uuid.UUID `json:"company_id"`
 	LastLoginAt        *time.Time `json:"last_login_at"`
 	PasswordChangedAt  *time.Time `json:"password_changed_at"`
 	CreatedAt          time.Time  `json:"created_at"`
@@ -34,8 +35,8 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 
 func (r *UserRepository) Create(ctx context.Context, user *User) error {
 	query := `
-		INSERT INTO users (email, password_hash, display_name, role, must_change_password, is_active)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO users (email, password_hash, display_name, role, must_change_password, is_active, company_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at, updated_at`
 
 	return r.pool.QueryRow(ctx, query,
@@ -45,19 +46,20 @@ func (r *UserRepository) Create(ctx context.Context, user *User) error {
 		user.Role,
 		user.MustChangePassword,
 		user.IsActive,
+		user.CompanyID,
 	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 }
 
 func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*User, error) {
 	query := `
 		SELECT id, email, password_hash, display_name, role, must_change_password,
-		       is_active, last_login_at, password_changed_at, created_at, updated_at
+		       is_active, company_id, last_login_at, password_changed_at, created_at, updated_at
 		FROM users WHERE id = $1`
 
 	user := &User{}
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&user.ID, &user.Email, &user.PasswordHash, &user.DisplayName,
-		&user.Role, &user.MustChangePassword, &user.IsActive,
+		&user.Role, &user.MustChangePassword, &user.IsActive, &user.CompanyID,
 		&user.LastLoginAt, &user.PasswordChangedAt, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
@@ -73,13 +75,13 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*User, erro
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*User, error) {
 	query := `
 		SELECT id, email, password_hash, display_name, role, must_change_password,
-		       is_active, last_login_at, password_changed_at, created_at, updated_at
+		       is_active, company_id, last_login_at, password_changed_at, created_at, updated_at
 		FROM users WHERE email = $1`
 
 	user := &User{}
 	err := r.pool.QueryRow(ctx, query, email).Scan(
 		&user.ID, &user.Email, &user.PasswordHash, &user.DisplayName,
-		&user.Role, &user.MustChangePassword, &user.IsActive,
+		&user.Role, &user.MustChangePassword, &user.IsActive, &user.CompanyID,
 		&user.LastLoginAt, &user.PasswordChangedAt, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
@@ -130,7 +132,7 @@ func (r *UserRepository) List(ctx context.Context, offset, limit int) ([]User, i
 
 	query := `
 		SELECT id, email, password_hash, display_name, role, must_change_password,
-		       is_active, last_login_at, password_changed_at, created_at, updated_at
+		       is_active, company_id, last_login_at, password_changed_at, created_at, updated_at
 		FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`
 
 	rows, err := r.pool.Query(ctx, query, limit, offset)
@@ -144,7 +146,41 @@ func (r *UserRepository) List(ctx context.Context, offset, limit int) ([]User, i
 		var u User
 		if err := rows.Scan(
 			&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName,
-			&u.Role, &u.MustChangePassword, &u.IsActive,
+			&u.Role, &u.MustChangePassword, &u.IsActive, &u.CompanyID,
+			&u.LastLoginAt, &u.PasswordChangedAt, &u.CreatedAt, &u.UpdatedAt,
+		); err != nil {
+			return nil, 0, fmt.Errorf("scan user: %w", err)
+		}
+		users = append(users, u)
+	}
+
+	return users, total, nil
+}
+
+func (r *UserRepository) ListByCompany(ctx context.Context, companyID uuid.UUID, offset, limit int) ([]User, int, error) {
+	countQuery := `SELECT COUNT(*) FROM users WHERE company_id = $1`
+	var total int
+	if err := r.pool.QueryRow(ctx, countQuery, companyID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count users by company: %w", err)
+	}
+
+	query := `
+		SELECT id, email, password_hash, display_name, role, must_change_password,
+		       is_active, company_id, last_login_at, password_changed_at, created_at, updated_at
+		FROM users WHERE company_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+
+	rows, err := r.pool.Query(ctx, query, companyID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list users by company: %w", err)
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(
+			&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName,
+			&u.Role, &u.MustChangePassword, &u.IsActive, &u.CompanyID,
 			&u.LastLoginAt, &u.PasswordChangedAt, &u.CreatedAt, &u.UpdatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan user: %w", err)

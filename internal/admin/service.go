@@ -10,12 +10,13 @@ import (
 )
 
 type DashboardStats struct {
-	TotalUsers    int
-	ActiveUsers   int
-	SystemVersion string
-	InstalledAt   string
-	PostgresOK    bool
-	RedisOK       bool
+	TotalUsers     int
+	ActiveUsers    int
+	TotalCompanies int
+	SystemVersion  string
+	InstalledAt    string
+	PostgresOK     bool
+	RedisOK        bool
 }
 
 type Service struct {
@@ -56,6 +57,12 @@ func (s *Service) GetDashboardStats(ctx context.Context) (*DashboardStats, error
 
 	stats.PostgresOK = database.PingPool(ctx, s.pool) == nil
 	stats.RedisOK = database.PingRedis(ctx, s.redis) == nil
+
+	companyRepo := models.NewCompanyRepository(s.pool)
+	companyCount, err := companyRepo.Count(ctx)
+	if err == nil {
+		stats.TotalCompanies = companyCount
+	}
 
 	return stats, nil
 }
