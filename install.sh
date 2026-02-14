@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# FasMail Panel - Script de Auto-Instalación
+# FasMail Panel - Script de Auto-Instalación con Detección de Puertos
 # =============================================================================
 # Uso desde una VPS limpia:
 #   curl -fsSL https://raw.githubusercontent.com/rvelez140/clinete-de-correo-fasmail-/main/install.sh | bash
@@ -9,15 +9,26 @@
 #   git clone https://github.com/rvelez140/clinete-de-correo-fasmail-.git
 #   cd clinete-de-correo-fasmail-
 #   ./install.sh
+#
+# Forzar un puerto especifico:
+#   APP_PORT=9090 ./install.sh
 # =============================================================================
 
 set -euo pipefail
+
+# Detectar si se ejecuta desde pipe (curl | bash) o interactivo
+if [ ! -t 0 ]; then
+    INTERACTIVE=false
+else
+    INTERACTIVE=true
+fi
 
 # ── Constantes ───────────────────────────────────────────────────────────────
 REPO_URL="https://github.com/rvelez140/clinete-de-correo-fasmail-.git"
 REPO_DIR="clinete-de-correo-fasmail-"
 APP_NAME="FasMail Panel"
-APP_PORT=8080
+APP_PORT=${APP_PORT:-8080}
+MAX_PORT_ATTEMPTS=50
 HEALTH_TIMEOUT=120
 
 # ── Colores ──────────────────────────────────────────────────────────────────
@@ -40,6 +51,7 @@ banner() {
     printf "╔══════════════════════════════════════════════════════════╗\n"
     printf "║             FasMail Panel - Auto Installer              ║\n"
     printf "║          Panel de Administracion de Correo              ║\n"
+    printf "║        Con Auto-Deteccion de Puertos Disponibles        ║\n"
     printf "╚══════════════════════════════════════════════════════════╝\n"
     printf "${NC}\n"
 }
@@ -122,6 +134,81 @@ clone_or_detect_repo() {
     success "Repositorio clonado en: $(pwd)"
 }
 
+# ── Limpiar contenedores previos si existen ──────────────────────────────────
+cleanup_existing() {
+    if docker compose ps -q 2>/dev/null | grep -q .; then
+        warn "Contenedores FasMail existentes detectados. Deteniendo..."
+        docker compose down 2>/dev/null || true
+        success "Contenedores anteriores detenidos"
+        sleep 2
+    fi
+}
+
+# ── Verificar si un puerto esta disponible ───────────────────────────────────
+check_port_available() {
+    local port=$1
+
+    # Metodo 1: ss (Linux moderno, mas comun en VPS Ubuntu/Debian)
+    if command -v ss &>/dev/null; then
+        if ss -tln 2>/dev/null | grep -qE ":${port}\b"; then
+            return 1
+        fi
+        return 0
+    fi
+
+    # Metodo 2: netstat (sistemas mas antiguos)
+    if command -v netstat &>/dev/null; then
+        if netstat -tln 2>/dev/null | grep -qE ":${port}\b"; then
+            return 1
+        fi
+        return 0
+    fi
+
+    # Metodo 3: /dev/tcp bash built-in (fallback universal)
+    if (echo >/dev/tcp/localhost/"${port}") &>/dev/null; then
+        return 1
+    fi
+
+    return 0
+}
+
+# ── Encontrar un puerto disponible ───────────────────────────────────────────
+find_available_port() {
+    local preferred_port=${1:-8080}
+    local port=$preferred_port
+
+    for ((i=0; i<MAX_PORT_ATTEMPTS; i++)); do
+        if check_port_available "$port"; then
+            echo "$port"
+            return 0
+        fi
+        warn "Puerto $port esta en uso, probando siguiente..."
+        port=$((port + 1))
+    done
+
+    error "No se encontro un puerto disponible en el rango ${preferred_port}-$((preferred_port + MAX_PORT_ATTEMPTS - 1))"
+    exit 1
+}
+
+# ── Detectar y asignar puerto ────────────────────────────────────────────────
+detect_port() {
+    printf "\n"
+    info "=== Auto-Deteccion de Puertos ==="
+    info "Verificando disponibilidad del puerto ${APP_PORT}..."
+
+    if check_port_available "$APP_PORT"; then
+        success "Puerto ${APP_PORT} esta disponible"
+    else
+        warn "Puerto ${APP_PORT} esta en uso por otro servicio"
+        info "Buscando puerto alternativo disponible..."
+        APP_PORT=$(find_available_port "$APP_PORT")
+        success "Puerto alternativo encontrado: ${APP_PORT}"
+    fi
+
+    info "FasMail Panel usara el puerto: ${APP_PORT}"
+    printf "\n"
+}
+
 # ── Generar secretos seguros ─────────────────────────────────────────────────
 generate_secret() {
     local length=${1:-32}
@@ -135,12 +222,20 @@ generate_secret() {
 # ── Crear archivo .env ───────────────────────────────────────────────────────
 create_env_file() {
     if [ -f ".env" ]; then
-        warn "Archivo .env ya existe."
-        printf "    Deseas sobreescribirlo? (s/N): "
-        read -r response
-        if [[ ! "$response" =~ ^[sS]$ ]]; then
-            info "Usando .env existente"
-            return 0
+        if [ "$INTERACTIVE" = true ]; then
+            warn "Archivo .env ya existe."
+            printf "    Deseas sobreescribirlo? (s/N): "
+            read -r response
+            if [[ ! "$response" =~ ^[sS]$ ]]; then
+                info "Usando .env existente"
+                if grep -q '^APP_PORT=' .env 2>/dev/null; then
+                    APP_PORT=$(grep '^APP_PORT=' .env | cut -d= -f2)
+                    info "Puerto del .env existente: ${APP_PORT}"
+                fi
+                return 0
+            fi
+        else
+            warn "Archivo .env ya existe. En modo no-interactivo, se sobreescribe."
         fi
         cp .env ".env.backup.$(date +%Y%m%d_%H%M%S)"
         success "Backup del .env anterior creado"
@@ -156,6 +251,9 @@ create_env_file() {
 # FasMail Panel - Configuracion generada automaticamente
 # Fecha: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 
+# Puerto del host (auto-detectado por el instalador)
+APP_PORT=${APP_PORT}
+
 # Contrasena de PostgreSQL (generada automaticamente)
 DB_PASSWORD=${db_password}
 
@@ -165,12 +263,14 @@ EOF
 
     chmod 600 .env
     success "Archivo .env creado con secretos seguros (permisos: 600)"
+    success "Puerto configurado en .env: ${APP_PORT}"
 }
 
 # ── Construir y levantar servicios ───────────────────────────────────────────
 build_and_start() {
     info "Construyendo imagen Docker y levantando servicios..."
     info "Esto puede tardar unos minutos en la primera ejecucion..."
+    info "El panel estara disponible en el puerto: ${APP_PORT}"
     printf "\n"
 
     docker compose up --build -d
@@ -234,6 +334,12 @@ show_summary() {
     printf "╚══════════════════════════════════════════════════════════╝\n"
     printf "${NC}\n"
 
+    printf "${BOLD}Puerto asignado:${NC}\n"
+    if [ "$APP_PORT" -ne 8080 ] 2>/dev/null; then
+        printf "  ${YELLOW}NOTA: El puerto por defecto (8080) estaba en uso.${NC}\n"
+        printf "  ${YELLOW}Se asigno automaticamente el puerto: ${APP_PORT}${NC}\n\n"
+    fi
+
     printf "${BOLD}Acceso:${NC}\n"
     printf "  URL:  ${CYAN}http://%s:%s${NC}\n" "$ip" "$APP_PORT"
     if [ "$ip" = "localhost" ]; then
@@ -263,7 +369,7 @@ show_summary() {
     printf "\n"
 
     printf "${BOLD}Archivos importantes:${NC}\n"
-    printf "  Configuracion:     ${CYAN}.env${NC}\n"
+    printf "  Configuracion:     ${CYAN}.env${NC} (puerto: ${APP_PORT})\n"
     printf "  Docker Compose:    ${CYAN}docker-compose.yml${NC}\n"
     printf "\n"
 
@@ -278,6 +384,8 @@ main() {
     banner
     check_requirements
     clone_or_detect_repo
+    cleanup_existing
+    detect_port
     create_env_file
     build_and_start
     wait_for_healthy

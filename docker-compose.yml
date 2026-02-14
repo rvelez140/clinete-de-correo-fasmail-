@@ -3,7 +3,7 @@ services:
     build: .
     container_name: fasmail-panel
     ports:
-      - "8080:8080"
+      - "${APP_PORT:-8080}:8080"
     environment:
       - FASMAIL_DB_HOST=postgres
       - FASMAIL_DB_PORT=5432
