@@ -23,7 +23,7 @@ WORKDIR /app
 
 COPY --from=builder /app/fasmail-panel .
 
-RUN mkdir -p /data && chown fasmail:fasmail /data
+RUN mkdir -p /data /data/apps && chown -R fasmail:fasmail /data
 
 USER fasmail
 

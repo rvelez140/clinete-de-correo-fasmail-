@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/fasmail/panel/internal/admin"
+	"github.com/fasmail/panel/internal/api"
 	"github.com/fasmail/panel/internal/auth"
 	"github.com/fasmail/panel/internal/config"
 	"github.com/fasmail/panel/internal/database"
@@ -114,8 +115,11 @@ func main() {
 	r.Use(func(c *gin.Context) {
 		path := c.Request.URL.Path
 
-		// Always allow static, health, uploads
-		if path == "/health" || len(path) >= 7 && path[:7] == "/static" || len(path) >= 8 && path[:8] == "/uploads" {
+		// Always allow static, health, uploads, and API routes
+		if path == "/health" ||
+			len(path) >= 7 && path[:7] == "/static" ||
+			len(path) >= 8 && path[:8] == "/uploads" ||
+			len(path) >= 5 && path[:5] == "/api/" {
 			c.Next()
 			return
 		}
@@ -321,6 +325,243 @@ func main() {
 			companyHandler := admin.NewCompanyHandler(companySvc)
 			companyHandler.HandleDeleteCompany(c)
 		})
+	}
+
+	// ---- DOWNLOADS WEB ROUTES (authenticated users) ----
+	adminGroup.GET("/downloads", func(c *gin.Context) {
+		if pool == nil {
+			c.Redirect(http.StatusFound, "/auth/login")
+			return
+		}
+		systemRepo := models.NewSystemConfigRepository(pool)
+		serverURL, _ := systemRepo.Get(c.Request.Context(), "server_url")
+		if serverURL == "" {
+			serverURL = "http://localhost:8080"
+		}
+		downloadsHandler := admin.NewDownloadsHandler(pool, serverURL)
+		downloadsHandler.ShowDownloads(c)
+	})
+	adminGroup.POST("/downloads/generate", func(c *gin.Context) {
+		if pool == nil {
+			c.Redirect(http.StatusFound, "/auth/login")
+			return
+		}
+		systemRepo := models.NewSystemConfigRepository(pool)
+		serverURL, _ := systemRepo.Get(c.Request.Context(), "server_url")
+		if serverURL == "" {
+			serverURL = "http://localhost:8080"
+		}
+		downloadsHandler := admin.NewDownloadsHandler(pool, serverURL)
+		downloadsHandler.HandleGenerateToken(c)
+	})
+
+	// ---- REST API v1 ROUTES ----
+	apiV1 := r.Group("/api/v1")
+	{
+		// Public auth endpoints
+		apiAuthHandler := api.NewAuthHandler(authSvc, jwtMgr, &pool)
+
+		apiAuthGroup := apiV1.Group("/auth")
+		{
+			apiAuthGroup.POST("/login", apiAuthHandler.Login)
+			apiAuthGroup.POST("/refresh", apiAuthHandler.Refresh)
+		}
+
+		// Public token validation (called by app on first launch)
+		apiDownloadsPublic := apiV1.Group("/downloads")
+		{
+			if pool != nil {
+				apiDlHandler := api.NewDownloadsHandler(pool)
+				apiDownloadsPublic.GET("/validate-token", apiDlHandler.ValidateToken)
+				apiDownloadsPublic.GET("/apps/:filename", apiDlHandler.ServeApp)
+			}
+		}
+
+		// Authenticated API endpoints
+		apiProtected := apiV1.Group("")
+		apiProtected.Use(api.APIAuthRequired(jwtMgr, &redisClient))
+		apiProtected.Use(api.APIForcePasswordChange())
+		{
+			// Auth (protected)
+			apiProtectedAuth := apiProtected.Group("/auth")
+			{
+				apiProtectedAuth.POST("/logout", apiAuthHandler.Logout)
+				apiProtectedAuth.GET("/profile", apiAuthHandler.Profile)
+			}
+
+			// Dashboard
+			apiProtected.GET("/admin/dashboard", func(c *gin.Context) {
+				if pool == nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "base de datos no disponible"})
+					return
+				}
+				userRepo := models.NewUserRepository(pool)
+				systemRepo := models.NewSystemConfigRepository(pool)
+				adminSvc := admin.NewService(userRepo, systemRepo, pool, redisClient)
+				companyRepo := models.NewCompanyRepository(pool)
+				companySvc := admin.NewCompanyService(companyRepo, userRepo)
+				apiAdminHandler := api.NewAdminHandler(adminSvc, companySvc)
+				apiAdminHandler.Dashboard(c)
+			})
+
+			// Settings
+			apiProtected.GET("/admin/settings", func(c *gin.Context) {
+				if pool == nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "base de datos no disponible"})
+					return
+				}
+				userRepo := models.NewUserRepository(pool)
+				systemRepo := models.NewSystemConfigRepository(pool)
+				adminSvc := admin.NewService(userRepo, systemRepo, pool, redisClient)
+				apiAdminHandler := api.NewAdminHandler(adminSvc, nil)
+				apiAdminHandler.GetSettings(c)
+			})
+			apiProtected.PUT("/admin/settings", func(c *gin.Context) {
+				if pool == nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "base de datos no disponible"})
+					return
+				}
+				userRepo := models.NewUserRepository(pool)
+				systemRepo := models.NewSystemConfigRepository(pool)
+				adminSvc := admin.NewService(userRepo, systemRepo, pool, redisClient)
+				apiAdminHandler := api.NewAdminHandler(adminSvc, nil)
+				apiAdminHandler.UpdateSettings(c)
+			})
+
+			// Users
+			apiProtected.GET("/admin/users", func(c *gin.Context) {
+				if pool == nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "base de datos no disponible"})
+					return
+				}
+				userRepo := models.NewUserRepository(pool)
+				systemRepo := models.NewSystemConfigRepository(pool)
+				adminSvc := admin.NewService(userRepo, systemRepo, pool, redisClient)
+				apiAdminHandler := api.NewAdminHandler(adminSvc, nil)
+				apiAdminHandler.ListUsers(c)
+			})
+
+			// Companies (super_admin only)
+			apiCompanies := apiProtected.Group("/admin/companies")
+			apiCompanies.Use(api.APISuperAdminRequired())
+			{
+				apiCompanies.GET("", func(c *gin.Context) {
+					if pool == nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "base de datos no disponible"})
+						return
+					}
+					companyRepo := models.NewCompanyRepository(pool)
+					userRepo := models.NewUserRepository(pool)
+					companySvc := admin.NewCompanyService(companyRepo, userRepo)
+					adminSvc := admin.NewService(userRepo, models.NewSystemConfigRepository(pool), pool, redisClient)
+					apiAdminHandler := api.NewAdminHandler(adminSvc, companySvc)
+					apiAdminHandler.ListCompanies(c)
+				})
+				apiCompanies.POST("", func(c *gin.Context) {
+					if pool == nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "base de datos no disponible"})
+						return
+					}
+					companyRepo := models.NewCompanyRepository(pool)
+					userRepo := models.NewUserRepository(pool)
+					companySvc := admin.NewCompanyService(companyRepo, userRepo)
+					adminSvc := admin.NewService(userRepo, models.NewSystemConfigRepository(pool), pool, redisClient)
+					apiAdminHandler := api.NewAdminHandler(adminSvc, companySvc)
+					apiAdminHandler.CreateCompany(c)
+				})
+				apiCompanies.GET("/:id", func(c *gin.Context) {
+					if pool == nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "base de datos no disponible"})
+						return
+					}
+					companyRepo := models.NewCompanyRepository(pool)
+					userRepo := models.NewUserRepository(pool)
+					companySvc := admin.NewCompanyService(companyRepo, userRepo)
+					adminSvc := admin.NewService(userRepo, models.NewSystemConfigRepository(pool), pool, redisClient)
+					apiAdminHandler := api.NewAdminHandler(adminSvc, companySvc)
+					apiAdminHandler.GetCompany(c)
+				})
+				apiCompanies.PUT("/:id", func(c *gin.Context) {
+					if pool == nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "base de datos no disponible"})
+						return
+					}
+					companyRepo := models.NewCompanyRepository(pool)
+					userRepo := models.NewUserRepository(pool)
+					companySvc := admin.NewCompanyService(companyRepo, userRepo)
+					adminSvc := admin.NewService(userRepo, models.NewSystemConfigRepository(pool), pool, redisClient)
+					apiAdminHandler := api.NewAdminHandler(adminSvc, companySvc)
+					apiAdminHandler.UpdateCompany(c)
+				})
+				apiCompanies.DELETE("/:id", func(c *gin.Context) {
+					if pool == nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "base de datos no disponible"})
+						return
+					}
+					companyRepo := models.NewCompanyRepository(pool)
+					userRepo := models.NewUserRepository(pool)
+					companySvc := admin.NewCompanyService(companyRepo, userRepo)
+					adminSvc := admin.NewService(userRepo, models.NewSystemConfigRepository(pool), pool, redisClient)
+					apiAdminHandler := api.NewAdminHandler(adminSvc, companySvc)
+					apiAdminHandler.DeleteCompany(c)
+				})
+			}
+
+			// Downloads token generation
+			apiProtected.POST("/downloads/generate-token", func(c *gin.Context) {
+				if pool == nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "base de datos no disponible"})
+					return
+				}
+				apiDlHandler := api.NewDownloadsHandler(pool)
+				apiDlHandler.GenerateToken(c)
+			})
+
+			// Email accounts CRUD
+			apiEmail := apiProtected.Group("/email/accounts")
+			{
+				apiEmail.GET("", func(c *gin.Context) {
+					if pool == nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "base de datos no disponible"})
+						return
+					}
+					emailHandler := api.NewEmailHandler(pool, cfg.JWT.Secret)
+					emailHandler.ListAccounts(c)
+				})
+				apiEmail.POST("", func(c *gin.Context) {
+					if pool == nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "base de datos no disponible"})
+						return
+					}
+					emailHandler := api.NewEmailHandler(pool, cfg.JWT.Secret)
+					emailHandler.CreateAccount(c)
+				})
+				apiEmail.GET("/:id", func(c *gin.Context) {
+					if pool == nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "base de datos no disponible"})
+						return
+					}
+					emailHandler := api.NewEmailHandler(pool, cfg.JWT.Secret)
+					emailHandler.GetAccount(c)
+				})
+				apiEmail.PUT("/:id", func(c *gin.Context) {
+					if pool == nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "base de datos no disponible"})
+						return
+					}
+					emailHandler := api.NewEmailHandler(pool, cfg.JWT.Secret)
+					emailHandler.UpdateAccount(c)
+				})
+				apiEmail.DELETE("/:id", func(c *gin.Context) {
+					if pool == nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "base de datos no disponible"})
+						return
+					}
+					emailHandler := api.NewEmailHandler(pool, cfg.JWT.Secret)
+					emailHandler.DeleteAccount(c)
+				})
+			}
+		}
 	}
 
 	// Start server
