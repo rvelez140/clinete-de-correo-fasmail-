@@ -1,0 +1,119 @@
+{{define "downloads"}}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}} - {{template "branding_title" .}}</title>
+    <link rel="stylesheet" href="/static/css/pico.min.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+    {{template "branding_head" .}}
+</head>
+<body>
+    <header class="navbar">
+        <div class="container">
+            <a href="/admin/" class="brand">{{template "branding_logo" .}}</a>
+            <nav>
+                <a href="/admin/">Dashboard</a>
+                <a href="/admin/downloads">Descargas</a>
+                <a href="/admin/settings">Configuraci&oacute;n</a>
+                {{if eq .UserRole "super_admin"}}<a href="/admin/companies">Empresas</a>{{end}}
+                <span>{{.UserEmail}}</span>
+                <form method="POST" action="/auth/logout" style="display:inline; margin:0;">
+                    <a href="#" onclick="this.closest('form').submit(); return false;" class="secondary">Salir</a>
+                </form>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="dashboard-header">
+            <h1>Descargar Aplicaci&oacute;n</h1>
+        </div>
+
+        <p>Descargue la aplicaci&oacute;n FasMail para su plataforma. Al hacer clic en
+           <strong>"Descargar y Vincular"</strong>, se generar&aacute; un enlace de
+           configuraci&oacute;n autom&aacute;tica vinculado a su cuenta.</p>
+
+        {{if .SetupURL}}
+        <article style="border-left: 4px solid var(--fasmail-success, #16a34a); padding: 1rem 1.5rem;">
+            <header><h3>Enlace de Configuraci&oacute;n Generado</h3></header>
+            <p>Abra este enlace en su dispositivo despu&eacute;s de instalar la aplicaci&oacute;n para configurarla autom&aacute;ticamente:</p>
+            <div style="background: var(--pico-muted-border-color); padding: 0.75rem 1rem; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 0.9rem;">
+                <a href="{{.SetupURL}}">{{.SetupURL}}</a>
+            </div>
+            <p style="margin-top: 0.75rem;"><small>Este enlace es de <strong>un solo uso</strong> y expira en <strong>24 horas</strong>.</small></p>
+        </article>
+        {{end}}
+
+        <div class="stats-grid">
+            <article>
+                <header>
+                    <h3>Android</h3>
+                </header>
+                <p>Aplicaci&oacute;n para dispositivos Android 8.0+</p>
+                <p><small>Formato: APK</small></p>
+                {{if .AndroidAvailable}}
+                <form method="POST" action="/admin/downloads/generate" style="margin-bottom: 0.5rem;">
+                    <input type="hidden" name="platform" value="android">
+                    <button type="submit" class="contrast">Descargar y Vincular</button>
+                </form>
+                <p><small><a href="/api/v1/downloads/apps/fasmail.apk">Descargar APK sin vincular</a></small></p>
+                {{else}}
+                <button disabled>APK no disponible a&uacute;n</button>
+                <p><small>El archivo APK ser&aacute; generado con el pr&oacute;ximo build de la aplicaci&oacute;n.</small></p>
+                {{end}}
+            </article>
+
+            <article>
+                <header>
+                    <h3>Windows</h3>
+                </header>
+                <p>Instalador para Windows 10 / 11</p>
+                <p><small>Formato: EXE</small></p>
+                {{if .WindowsAvailable}}
+                <form method="POST" action="/admin/downloads/generate" style="margin-bottom: 0.5rem;">
+                    <input type="hidden" name="platform" value="windows">
+                    <button type="submit" class="contrast">Descargar y Vincular</button>
+                </form>
+                <p><small><a href="/api/v1/downloads/apps/fasmail-setup.exe">Descargar EXE sin vincular</a></small></p>
+                {{else}}
+                <button disabled>Instalador no disponible a&uacute;n</button>
+                <p><small>El instalador ser&aacute; generado con el pr&oacute;ximo build de la aplicaci&oacute;n.</small></p>
+                {{end}}
+            </article>
+
+            <article>
+                <header>
+                    <h3>Linux</h3>
+                </header>
+                <p>Binario para distribuciones Linux x86_64</p>
+                <p><small>Formato: binario nativo</small></p>
+                {{if .LinuxAvailable}}
+                <form method="POST" action="/admin/downloads/generate" style="margin-bottom: 0.5rem;">
+                    <input type="hidden" name="platform" value="linux">
+                    <button type="submit" class="contrast">Descargar y Vincular</button>
+                </form>
+                <p><small><a href="/api/v1/downloads/apps/fasmail-linux">Descargar binario sin vincular</a></small></p>
+                {{else}}
+                <button disabled>Binario no disponible a&uacute;n</button>
+                <p><small>El binario ser&aacute; generado con el pr&oacute;ximo build de la aplicaci&oacute;n.</small></p>
+                {{end}}
+            </article>
+        </div>
+
+        <article>
+            <header><h3>Instrucciones de Instalaci&oacute;n</h3></header>
+            <ol>
+                <li>Descargue el instalador correspondiente a su plataforma usando el bot&oacute;n <strong>"Descargar y Vincular"</strong>.</li>
+                <li>Instale la aplicaci&oacute;n en su dispositivo.</li>
+                <li>Abra el <strong>enlace de configuraci&oacute;n</strong> generado en su dispositivo.</li>
+                <li>La aplicaci&oacute;n se configurar&aacute; autom&aacute;ticamente con su cuenta.</li>
+                <li>Inicie sesi&oacute;n con sus credenciales para completar la configuraci&oacute;n.</li>
+            </ol>
+            <p><small>Tambi&eacute;n puede descargar la aplicaci&oacute;n sin vincular y configurar su cuenta manualmente desde la pantalla de inicio de sesi&oacute;n.</small></p>
+        </article>
+    </main>
+</body>
+</html>
+{{end}}

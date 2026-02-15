@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=FasMail
+Comment=Cliente de correo FasMail
+Exec=fasmail_app
+Icon=com.fasmail.app
+Terminal=false
+Type=Application
+Categories=Network;Email;
